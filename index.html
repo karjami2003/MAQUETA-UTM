@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maqueta 3D - Irregularidad en Planta Tipo 2 | UTM Diseño Estructural</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- Fuentes Google Inter y JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div id="app-container">
+    <!-- Viewport Three.js -->
+    <div id="canvas-container"></div>
+
+    <!-- Barra de Navegación Superior -->
+    <header id="top-header">
+      <div class="brand-section">
+        <span class="brand-badge"><i class="fa-solid fa-building-shield"></i> UTM - INGENIERÍA CIVIL</span>
+        <div class="brand-title">
+          <h1>Diseño Estructural 3D | Edificio Comercial Portoviejo (2 Pisos)</h1>
+          <span>Irregularidad Tipo 2: Retroceso de Esquinas (31 × 28 m) | Escalamiento y Simulación Dinámica</span>
+        </div>
+      </div>
+
+      <!-- Selector de Modo Estructural -->
+      <div class="structural-mode-selector">
+        <button id="btn-mode-original" class="mode-btn active-original" title="Caso 1: Pórticos sin arriostramiento (Vulnerable a Torsión)">
+          <i class="fa-solid fa-triangle-exclamation"></i> Caso 1: Estructura Original
+        </button>
+        <button id="btn-mode-mitigated" class="mode-btn" title="Caso 2: Mitigada con Diagonales en X (Rigidizada)">
+          <i class="fa-solid fa-shield-halved"></i> Caso 2: Mitigada (Diagonales en X)
+        </button>
+      </div>
+
+      <!-- Herramientas de Cámara y Módulos -->
+      <div class="toolbar-center">
+        <button id="view-3d" class="tool-btn active" title="Vista Isométrica 3D">
+          <i class="fa-solid fa-cube"></i> 3D
+        </button>
+        <button id="view-top" class="tool-btn" title="Vista en Planta (Superior)">
+          <i class="fa-solid fa-arrows-to-dot"></i> Planta
+        </button>
+        <button id="view-front" class="tool-btn" title="Vista de Fachada Frontal">
+          <i class="fa-solid fa-border-all"></i> Frontal
+        </button>
+        <button id="view-side" class="tool-btn" title="Vista de Fachada Lateral">
+          <i class="fa-solid fa-bars-staggered"></i> Lateral
+        </button>
+        <button id="btn-reset-view" class="tool-btn" title="Restablecer posición de cámara">
+          <i class="fa-solid fa-rotate-left"></i>
+        </button>
+        <button id="btn-charac" class="tool-btn" style="color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.4);" title="Caracterización del Edificio Real fotografiado en Portoviejo">
+          <i class="fa-solid fa-clipboard-list"></i> Edificio Real
+        </button>
+        <button id="btn-scaling" class="tool-btn" style="color: #86efac; border: 1px solid rgba(34, 197, 94, 0.4);" title="Escalamiento para Mesa Vibratoria (51x51 cm y 76x76 cm) y Materiales">
+          <i class="fa-solid fa-up-right-and-down-left-from-center"></i> Escalamiento
+        </button>
+        <button id="btn-toggle-shake-table" class="tool-btn" style="color: #fed7aa; border: 1px solid rgba(249, 115, 22, 0.4);" title="Abrir Mesa Vibratoria Virtual">
+          <i class="fa-solid fa-wave-square" style="color: var(--accent-orange);"></i> Mesa Vibratoria
+        </button>
+        <button id="btn-results" class="tool-btn" style="color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4);" title="Tabla de Resultados Comparativos y Exportación CSV">
+          <i class="fa-solid fa-table"></i> Resultados
+        </button>
+        <button id="btn-theory" class="tool-btn" title="Parámetros, Hipótesis y Limitaciones Dinámicas de 2 GDL">
+          <i class="fa-solid fa-book-bookmark"></i> Hipótesis
+        </button>
+        <button id="btn-screenshot" class="tool-btn" title="Capturar imagen HD para reporte">
+          <i class="fa-solid fa-camera"></i>
+        </button>
+        <button id="btn-info" class="tool-btn" title="Memoria Técnica y Normativa NEC-15">
+          <i class="fa-solid fa-circle-question"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Disparadores de Paneles Colapsados -->
+    <button id="trigger-left" class="toggle-panel-trigger" style="display: none;">
+      <i class="fa-solid fa-sliders"></i> Dimensiones
+    </button>
+    <button id="trigger-right" class="toggle-panel-trigger" style="display: none;">
+      <i class="fa-solid fa-chart-line"></i> Diagnóstico NEC
+    </button>
+
+    <!-- Panel Izquierdo: Dimensiones y Parámetros Editables -->
+    <aside id="sidebar-left" class="sidebar-panel sidebar-left">
+      <div class="panel-header">
+        <h2><i class="fa-solid fa-ruler-combined"></i> Geometría y Croquis (Portoviejo)</h2>
+        <button id="close-left" class="panel-close-btn" title="Ocultar panel">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+      </div>
+
+      <div class="panel-body">
+        <!-- Advertencia Profesional de Estimación Preliminar -->
+        <div class="warning-box">
+          <i class="fa-solid fa-triangle-exclamation warning-icon"></i>
+          <div class="warning-text">
+            <strong>DIMENSIONES PRELIMINARES DEL CROQUIS</strong>
+            Datos iniciales del edificio comercial de Portoviejo (2 pisos). Requieren validación definitiva mediante levantamiento topográfico in situ.
+          </div>
+        </div>
+
+        <!-- Grupo: Dimensiones Generales de la Planta en L del Croquis -->
+        <div class="control-group">
+          <div class="group-title">
+            <span>Dimensiones en Planta (Croquis)</span>
+            <span class="badge-info">2 Niveles</span>
+          </div>
+
+          <div class="input-row">
+            <label for="input-Lx">Largo Total X (Lx):</label>
+            <div class="input-controls">
+              <input type="range" id="slider-Lx" min="15" max="45" step="0.5" value="31">
+              <input type="number" id="input-Lx" min="15" max="45" step="0.5" value="31">
+              <span class="unit-tag">m</span>
+            </div>
+          </div>
+
+          <div class="input-row">
+            <label for="input-Lz">Largo Total Z (Lz):</label>
+            <div class="input-controls">
+              <input type="range" id="slider-Lz" min="15" max="40" step="0.5" value="28">
+              <input type="number" id="input-Lz" min="15" max="40" step="0.5" value="28">
+              <span class="unit-tag">m</span>
+            </div>
+          </div>
+
+          <div class="input-row">
+            <label for="input-wSup">Ancho Brazo Superior (wSup):</label>
+            <div class="input-controls">
+              <input type="range" id="slider-wSup" min="5" max="25" step="0.5" value="11">
+              <input type="number" id="input-wSup" min="5" max="25" step="0.5" value="11">
+              <span class="unit-tag">m</span>
+            </div>
+          </div>
+
+          <div class="input-row">
+            <label for="input-wInf">Ancho Brazo Inferior (wInf):</label>
+            <div class="input-controls">
+              <input type="range" id="slider-wInf" min="5" max="25" step="0.5" value="10">
+              <input type="number" id="input-wInf" min="5" max="25" step="0.5" value="10">
+              <span class="unit-tag">m</span>
+            </div>
+          </div>
+
+          <div class="input-row">
+            <label>Entrante Resultante (a × b):</label>
+            <div class="input-controls">
+              <strong id="label-reentrant-dims" style="font-family: var(--font-mono); color: var(--accent-orange); font-size: 0.78rem;">20.0 m × 18.0 m</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grupo: Alturas y Número de Pisos -->
+        <div class="control-group">
+          <div class="group-title">
+            <span>Alturas y Niveles</span>
+            <span class="badge-info">2 Pisos</span>
+          </div>
+
+          <div class="input-row">
+            <label for="input-story-h">Altura de Entrepiso (h):</label>
+            <div class="input-controls">
+              <input type="range" id="slider-story-h" min="2.4" max="4.2" step="0.1" value="3.0">
+              <input type="number" id="input-story-h" min="2.4" max="4.2" step="0.1" value="3.0">
+              <span class="unit-tag">m</span>
+            </div>
+          </div>
+
+          <div class="input-row">
+            <label>Altura Total Edificación (H):</label>
+            <div class="input-controls">
+              <strong id="label-total-height" style="font-family: var(--font-mono); color: var(--accent-cyan);">6.00 m</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grupo: Secciones de Elementos Estructurales -->
+        <div class="control-group">
+          <div class="group-title">
+            <span>Prediseño de Elementos de H.A.</span>
+            <span class="badge-info">Secciones</span>
+          </div>
+
+          <div class="input-row">
+            <label for="input-col-dim">Columna (cx = cz):</label>
+            <div class="input-controls">
+              <input type="range" id="slider-col-dim" min="30" max="65" step="5" value="45">
+              <input type="number" id="input-col-dim" min="30" max="65" step="5" value="45">
+              <span class="unit-tag">cm</span>
+            </div>
+          </div>
+
+          <div class="input-row">
+            <label for="input-beam-h">Peralte de Viga (hv):</label>
+            <div class="input-controls">
+              <input type="range" id="slider-beam-h" min="30" max="65" step="5" value="45">
+              <input type="number" id="input-beam-h" min="30" max="65" step="5" value="45">
+              <span class="unit-tag">cm</span>
+            </div>
+          </div>
+
+          <div class="input-row">
+            <label for="input-beam-w">Base de Viga (bv):</label>
+            <div class="input-controls">
+              <input type="range" id="slider-beam-w" min="25" max="45" step="5" value="30">
+              <input type="number" id="input-beam-w" min="25" max="45" step="5" value="30">
+              <span class="unit-tag">cm</span>
+            </div>
+          </div>
+
+          <div class="input-row">
+            <label for="input-slab-e">Espesor de Losa (e):</label>
+            <div class="input-controls">
+              <input type="range" id="slider-slab-e" min="15" max="30" step="5" value="20">
+              <input type="number" id="input-slab-e" min="15" max="30" step="5" value="20">
+              <span class="unit-tag">cm</span>
+            </div>
+          </div>
+        </div>
+
+        <button id="btn-reset-defaults" class="btn-secondary" style="width: 100%;">
+          <i class="fa-solid fa-arrow-rotate-left"></i> Restablecer Datos de Portoviejo (31 × 28 m)
+        </button>
+      </div>
+    </aside>
+
+    <!-- Panel Derecho: Diagnóstico NEC-15 y Capas -->
+    <aside id="sidebar-right" class="sidebar-panel sidebar-right">
+      <div class="panel-header">
+        <h2><i class="fa-solid fa-chart-pie"></i> Diagnóstico y Mitigación</h2>
+        <button id="close-right" class="panel-close-btn" title="Ocultar panel">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+
+      <div class="panel-body">
+        <!-- Diagnóstico Normativo NEC-SE-DS -->
+        <div class="diagnosis-card">
+          <div class="diagnosis-header">
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">
+              Criterio NEC-15 (Tabla 7)
+            </span>
+            <span id="badge-irregularity-status" class="diagnosis-badge badge-irregular">
+              TIPO 2: IRREGULAR
+            </span>
+          </div>
+
+          <div class="metric-grid">
+            <div class="metric-item">
+              <span class="label">Proyección X (a / Lx):</span>
+              <div id="val-ratio-x" class="value">64.5%</div>
+              <span class="sub">> 15.0% Umbral Crítico</span>
+            </div>
+            <div class="metric-item">
+              <span class="label">Proyección Z (b / Lz):</span>
+              <div id="val-ratio-z" class="value">64.3%</div>
+              <span class="sub">> 15.0% Umbral Crítico</span>
+            </div>
+            <div class="metric-item">
+              <span class="label">Penalización Planta (&phi;p2):</span>
+              <div id="val-phi-p2" class="value" style="color: var(--accent-orange);">0.90</div>
+              <span class="sub">Factor de Reducción Sísmica</span>
+            </div>
+            <div class="metric-item">
+              <span class="label">Área de Entrepiso (L):</span>
+              <div id="val-area-total" class="value">508 m²</div>
+              <span id="val-area-pct" class="sub">58.5% del rectángulo base</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Excentricidad Torsional y Mitigación -->
+        <div class="control-group">
+          <div class="group-title">
+            <span>Comportamiento Torsional</span>
+            <span class="badge-info">Centro Masas vs Rigidez</span>
+          </div>
+
+          <div class="metric-grid">
+            <div class="metric-item">
+              <span class="label">Brazo de Excentricidad (e):</span>
+              <div id="val-eccentricity" class="value" style="color: var(--accent-yellow);">1.41 m</div>
+              <span id="val-ecc-sub" class="sub">Vulnerable a Torsión Sísmica</span>
+            </div>
+            <div class="metric-item">
+              <span class="label">Estado de Rigidez:</span>
+              <div id="val-mitigation-state" class="value" style="font-size: 0.85rem; color: #f87171;">
+                Sin Arriostrar
+              </div>
+              <span class="sub">Alta amplificación torsional</span>
+            </div>
+          </div>
+
+          <div class="torsion-card" id="torsion-explanation">
+            <strong><i class="fa-solid fa-circle-exclamation"></i> Patología Sísmica:</strong>
+            El retroceso genera asimetría en planta. El Centro de Masas (CM) no coincide con el Centro de Rigidez (CR), induciendo momentos torsores elevados que sobrecargan las columnas perimetrales y concentran esfuerzos cortantes en el vértice entrante.
+          </div>
+        </div>
+
+        <!-- Capas y Filtros Visuales 3D -->
+        <div class="control-group">
+          <div class="group-title">
+            <span>Capas del Modelo 3D</span>
+            <span class="badge-info">Visualización</span>
+          </div>
+
+          <div class="toggle-row">
+            <span class="toggle-label"><i class="fa-solid fa-layer-group" style="color: var(--accent-cyan);"></i> Losas de Hormigón</span>
+            <label class="switch">
+              <input type="checkbox" id="layer-slabs" checked>
+              <span class="slider-switch"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <span class="toggle-label"><i class="fa-solid fa-grip-lines" style="color: var(--text-muted);"></i> Vigas de Pórtico</span>
+            <label class="switch">
+              <input type="checkbox" id="layer-beams" checked>
+              <span class="slider-switch"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <span class="toggle-label"><i class="fa-solid fa-cubes-stacked" style="color: var(--text-muted);"></i> Columnas de H.A.</span>
+            <label class="switch">
+              <input type="checkbox" id="layer-columns" checked>
+              <span class="slider-switch"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <span class="toggle-label"><i class="fa-solid fa-shoe-prints" style="color: var(--text-dim);"></i> Cimentación (Zapatas)</span>
+            <label class="switch">
+              <input type="checkbox" id="layer-foundations" checked>
+              <span class="slider-switch"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <span class="toggle-label"><i class="fa-solid fa-ruler" style="color: var(--accent-cyan);"></i> Cotas y Dimensiones</span>
+            <label class="switch">
+              <input type="checkbox" id="layer-dimensions" checked>
+              <span class="slider-switch"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <span class="toggle-label"><i class="fa-solid fa-table-cells" style="color: var(--accent-cyan);"></i> Ejes Estructurales</span>
+            <label class="switch">
+              <input type="checkbox" id="layer-axes" checked>
+              <span class="slider-switch"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <span class="toggle-label"><i class="fa-solid fa-bullseye" style="color: var(--accent-yellow);"></i> Marcadores CM y CR</span>
+            <label class="switch">
+              <input type="checkbox" id="layer-markers" checked>
+              <span class="slider-switch"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <span class="toggle-label"><i class="fa-solid fa-bolt" style="color: var(--accent-red);"></i> Vértice de Concentración</span>
+            <label class="switch">
+              <input type="checkbox" id="layer-hotspot" checked>
+              <span class="slider-switch"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Leyenda de Colores 3D -->
+        <div class="control-group">
+          <div class="group-title">
+            <span>Leyenda de Elementos</span>
+          </div>
+          <div class="legend-container">
+            <div class="legend-item"><span class="color-dot" style="background: #94a3b8;"></span> Columnas de H.A. (45×45 cm)</div>
+            <div class="legend-item"><span class="color-dot" style="background: #64748b;"></span> Vigas Principales y de Amarre</div>
+            <div class="legend-item"><span class="color-dot" style="background: #38bdf8;"></span> Losas Translúcidas (e=20 cm)</div>
+            <div class="legend-item"><span class="color-dot" style="background: #f97316;"></span> Diagonales en X (Acero Estructural)</div>
+            <div class="legend-item"><span class="color-dot" style="background: #1e293b; border: 1px solid #eab308;"></span> Mesa Vibratoria (Acero Industrial)</div>
+            <div class="legend-item"><span class="color-dot" style="background: #22c55e;"></span> Centro de Masas (CM)</div>
+            <div class="legend-item"><span class="color-dot" style="background: #ef4444;"></span> Centro de Rigidez (CR) Original</div>
+            <div class="legend-item"><span class="color-dot" style="background: #38bdf8;"></span> Centro de Rigidez (CR) Mitigado</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Panel de Ensayo Dinámico en Mesa Vibratoria Virtual -->
+    <section id="shake-table-panel" class="panel-minimized">
+      <div class="st-header">
+        <div class="st-title">
+          <i class="fa-solid fa-volcano"></i>
+          <span>ENSAYO DINÁMICO: MESA VIBRATORIA VIRTUAL (UTM LAB)</span>
+        </div>
+        <div class="st-header-controls">
+          <button id="btn-st-play" class="btn-media btn-media-play" title="Iniciar excitación sísmica">
+            <i class="fa-solid fa-play"></i> INICIAR
+          </button>
+          <button id="btn-st-pause" class="btn-media btn-media-pause" title="Pausar excitación">
+            <i class="fa-solid fa-pause"></i> PAUSAR
+          </button>
+          <button id="btn-st-reset" class="btn-media btn-media-reset" title="Reiniciar ensayo y devolver estructura al reposo">
+            <i class="fa-solid fa-rotate-left"></i> REINICIAR
+          </button>
+          <button id="btn-st-open-results" class="btn-media" style="background: #0284c7; color: white;" title="Ver tabla de resultados calculados">
+            <i class="fa-solid fa-table"></i> RESULTADOS
+          </button>
+          <button id="btn-st-export-csv" class="btn-media" style="background: #0f766e; color: white;" title="Descargar serie de tiempo en CSV">
+            <i class="fa-solid fa-file-csv"></i> CSV
+          </button>
+          <button id="btn-st-minimize" class="btn-toggle-size" title="Minimizar panel de mesa vibratoria">
+            <i class="fa-solid fa-chevron-down"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="st-body">
+        <!-- Columna 1: Configuración de Excitación Sísmica de la Base -->
+        <div class="st-params-col">
+          <div class="st-param-row">
+            <div class="st-param-label">
+              <span>Tipo de Excitación:</span>
+            </div>
+            <div class="direction-btn-group" style="grid-template-columns: 1fr 1fr 1fr;">
+              <button id="st-mode-harmonic" class="dir-btn active" title="Excitación armónica senoidal">Armónica</button>
+              <button id="st-mode-sweep" class="dir-btn" title="Barrido de frecuencias (Chirp)">Barrido</button>
+              <button id="st-mode-record" class="dir-btn" title="Registro Real Terremoto Pedernales 2016 (Mw 7.8)">Pedernales</button>
+            </div>
+          </div>
+
+          <div class="st-param-row" id="row-st-freq">
+            <div class="st-param-label">
+              <span>Frecuencia Excitación (f):</span>
+              <span id="st-val-freq" class="st-param-val">2.20 Hz</span>
+            </div>
+            <input type="range" id="st-slider-freq" class="st-slider" min="0.5" max="4.5" step="0.05" value="2.2">
+            <div class="preset-btn-group">
+              <button class="preset-btn" data-freq="1.0">1.0 Hz</button>
+              <button class="preset-btn" data-freq="2.2" title="Cerca de resonancia de Caso 1">2.2 Hz (Res C1)</button>
+              <button class="preset-btn" data-freq="3.4" title="Cerca de resonancia de Caso 2">3.4 Hz (Res C2)</button>
+            </div>
+          </div>
+
+          <div class="st-param-row">
+            <div class="st-param-label">
+              <span>Aceleración Base (ag):</span>
+              <span id="st-val-accel" class="st-param-val">0.20 g (1.96 m/s²)</span>
+            </div>
+            <input type="range" id="st-slider-amp" class="st-slider" min="0.05" max="0.50" step="0.01" value="0.20">
+          </div>
+
+          <div class="st-param-row">
+            <div class="st-param-label">
+              <span>Dirección Sísmica:</span>
+            </div>
+            <div class="direction-btn-group">
+              <button id="st-dir-x" class="dir-btn">Eje X</button>
+              <button id="st-dir-z" class="dir-btn">Eje Z</button>
+              <button id="st-dir-xz" class="dir-btn active" title="Excitación Biaxial (Dispara máxima torsión)">Diag. X+Z</button>
+            </div>
+          </div>
+
+          <!-- Opción de Archivo CSV personalizado -->
+          <div class="file-upload-wrap">
+            <label for="st-file-csv" class="file-upload-btn"><i class="fa-solid fa-file-arrow-up"></i> Cargar CSV</label>
+            <input type="file" id="st-file-csv" accept=".csv,.txt" style="display: none;">
+            <span id="st-csv-filename" style="font-size: 0.68rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Opcional: CSV acel(t)</span>
+          </div>
+        </div>
+
+        <!-- Columna 2: Gráfico de Desplazamiento u(t) en Tiempo Real -->
+        <div class="st-chart-col">
+          <div class="chart-header">
+            <div class="chart-title">
+              <i class="fa-solid fa-chart-line" style="color: var(--accent-cyan);"></i>
+              <span>Respuesta de Techo vs Tiempo u2(t)</span>
+            </div>
+            <div class="chart-legend">
+              <div class="legend-badge">
+                <span class="line-indicator" style="background: #ef4444;"></span>
+                <span style="color: #fca5a5;">Caso 1 (Original)</span>
+              </div>
+              <div class="legend-badge">
+                <span class="line-indicator" style="background: #22c55e;"></span>
+                <span style="color: #86efac;">Caso 2 (Mitigado en X)</span>
+              </div>
+            </div>
+          </div>
+          <div class="canvas-chart-wrap">
+            <canvas id="canvas-time-history" width="560" height="135"></canvas>
+          </div>
+        </div>
+
+        <!-- Columna 3: Gráfico de Derivas de Entrepiso (% Drift) vs Límite NEC -->
+        <div class="st-drifts-col">
+          <div class="chart-header">
+            <div class="chart-title">
+              <i class="fa-solid fa-bars-progress" style="color: var(--accent-orange);"></i>
+              <span>Derivas de Entrepiso (&Delta;/h)</span>
+            </div>
+          </div>
+          <div class="canvas-drift-wrap">
+            <canvas id="canvas-story-drifts" width="310" height="135"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Botón flotante para abrir la mesa vibratoria cuando está minimizada -->
+    <button id="trigger-shake-table">
+      <i class="fa-solid fa-wave-square"></i> Abrir Mesa Vibratoria Virtual
+    </button>
+
+    <!-- Barra de Estado Inferior -->
+    <footer id="bottom-bar">
+      <div class="status-section">
+        <span class="status-item"><span class="pulse-dot"></span> Modelo 3D WebGL Activo</span>
+        <span class="status-item"><i class="fa-solid fa-location-dot"></i> Portoviejo, Manabí (Zona Sísmica VI | Z = 0.50g)</span>
+      </div>
+      <div class="status-section">
+        <span class="status-item">Rotación: Clic Izquierdo | Paneo: Clic Derecho | Zoom: Rueda</span>
+        <span class="status-item" style="color: var(--accent-yellow);">* Estimaciones preliminares didácticas del croquis comercial</span>
+      </div>
+    </footer>
+
+    <!-- MODAL 1: Caracterización del Edificio Real (Portoviejo) - Módulo 1 -->
+    <div id="charac-modal" class="full-screen-modal">
+      <div class="fs-modal-card">
+        <div class="fs-modal-header">
+          <h3><i class="fa-solid fa-clipboard-list" style="color: var(--accent-blue);"></i> Caracterización del Edificio Real: Inmueble Comercial en Portoviejo</h3>
+          <button id="close-charac-btn" class="panel-close-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="fs-modal-body">
+          <p style="font-size: 0.84rem; color: #cbd5e1;">
+            De acuerdo con los principios de ética en ingeniería estructural, esta maqueta digital distingue estrictamente los datos verificados in situ de las hipótesis adoptadas para el modelo matemático preliminar:
+          </p>
+          <div class="charac-grid">
+            <!-- Bloque 1: Observados -->
+            <div class="charac-card observed">
+              <h4><i class="fa-solid fa-camera" style="color: #60a5fa;"></i> 1. Datos Observados en la Fotografía / Visita</h4>
+              <ul class="charac-list">
+                <li><i class="fa-solid fa-check text-blue"></i> <strong>Uso de la edificación:</strong> Comercial en planta baja, mezzanine / oficinas en planta alta.</li>
+                <li><i class="fa-solid fa-check text-blue"></i> <strong>Número de niveles:</strong> 2 pisos estructurados con pórticos de hormigón armado.</li>
+                <li><i class="fa-solid fa-check text-blue"></i> <strong>Configuración en planta:</strong> Claramente asimétrica en forma de «L», con una esquina entrante profunda.</li>
+                <li><i class="fa-solid fa-check text-blue"></i> <strong>Cerramientos:</strong> Fachadas acristaladas y mampostería no estructural en planta baja.</li>
+              </ul>
+            </div>
+
+            <!-- Bloque 2: Dimensiones Estimadas -->
+            <div class="charac-card estimated">
+              <h4><i class="fa-solid fa-ruler-combined" style="color: #facc15;"></i> 2. Dimensiones Estimadas del Croquis</h4>
+              <ul class="charac-list">
+                <li><i class="fa-solid fa-angle-right"></i> <strong>Largo horizontal total:</strong> 31,00 m.</li>
+                <li><i class="fa-solid fa-angle-right"></i> <strong>Largo vertical total:</strong> 28,00 m.</li>
+                <li><i class="fa-solid fa-angle-right"></i> <strong>Ancho del brazo inferior:</strong> 10,00 m.</li>
+                <li><i class="fa-solid fa-angle-right"></i> <strong>Ancho del brazo superior:</strong> 11,00 m.</li>
+                <li><i class="fa-solid fa-angle-right"></i> <strong>Entrante resultante:</strong> Ancho a = 20,00 m (64,5%), Profundidad b = 18,00 m (64,3%).</li>
+                <li><i class="fa-solid fa-angle-right"></i> <strong>Altura estimada por entrepiso:</strong> 3,00 m (Altura total 6,00 m).</li>
+              </ul>
+            </div>
+
+            <!-- Bloque 3: Adoptadas en el Modelo -->
+            <div class="charac-card mathematical">
+              <h4><i class="fa-solid fa-calculator" style="color: #4ade80;"></i> 3. Parámetros Adoptados para el Modelo</h4>
+              <ul class="charac-list">
+                <li><i class="fa-solid fa-circle-notch"></i> <strong>Modelo analítico:</strong> Edificio de corte traslacional de 2 Grados de Libertad (2-GDL).</li>
+                <li><i class="fa-solid fa-circle-notch"></i> <strong>Material resistente:</strong> Hormigón armado f'c = 210 kg/cm² (E = 21.500 MPa, &rho; = 2.400 kg/m³).</li>
+                <li><i class="fa-solid fa-circle-notch"></i> <strong>Secciones preliminares:</strong> Columnas 45 × 45 cm, Vigas 30 × 45 cm, Losa e = 20 cm.</li>
+                <li><i class="fa-solid fa-circle-notch"></i> <strong>Amortiguamiento:</strong> Rayleigh viscoso &xi; = 5% para ambos modos.</li>
+                <li><i class="fa-solid fa-circle-notch"></i> <strong>Diafragma:</strong> Rígido en su plano en cada nivel.</li>
+              </ul>
+            </div>
+
+            <!-- Bloque 4: Pendientes de Confirmar -->
+            <div class="charac-card pending">
+              <h4><i class="fa-solid fa-hourglass-half" style="color: #f87171;"></i> 4. Datos Pendientes de Confirmar</h4>
+              <ul class="charac-list">
+                <li><i class="fa-solid fa-question"></i> Levantamiento topográfico y arquitectónico con escáner láser / estación total.</li>
+                <li><i class="fa-solid fa-question"></i> Cuantías y detallado de armadura de acero en nudos y vigas colectoras.</li>
+                <li><i class="fa-solid fa-question"></i> Estudio de mecánica de suelos in situ (Vs30 y perfil de suelo según NEC-SE-DS).</li>
+                <li><i class="fa-solid fa-question"></i> Planos estructurales as-built y memorias de cálculo originales.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="fs-modal-footer" style="padding: 12px 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; background: var(--bg-primary);">
+          <button id="btn-charac-entendido" class="btn-primary">Entendido</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 2: Escalamiento para Mesa Vibratoria y Materiales Comerciales - Módulos 4 y 5 -->
+    <div id="scaling-modal" class="full-screen-modal">
+      <div class="fs-modal-card">
+        <div class="fs-modal-header">
+          <h3><i class="fa-solid fa-up-right-and-down-left-from-center" style="color: var(--accent-green);"></i> Escalamiento Geométrico y Materiales Comerciales para Mesa Vibratoria</h3>
+          <button id="close-scaling-btn" class="panel-close-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="fs-modal-body">
+          <div class="scaling-controls-grid">
+            <!-- Columna Izquierda: Configuración de Mesa -->
+            <div>
+              <label style="font-weight: 600; font-size: 0.8rem; color: #f8fafc;">Seleccionar Mesa Vibratoria de Laboratorio:</label>
+              <div class="table-selector-group">
+                <button id="btn-choice-table51" class="btn-table-choice active">Mesa 51 × 51 cm</button>
+                <button id="btn-choice-table76" class="btn-table-choice">Mesa 76 × 76 cm</button>
+              </div>
+
+              <div style="margin-top: 14px;">
+                <label for="input-scale-margin" style="font-size: 0.78rem; color: #cbd5e1;">Margen para Mordazas/Fijaciones (cm):</label>
+                <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+                  <input type="number" id="input-scale-margin" min="1.0" max="8.0" step="0.5" value="3.0" style="width: 70px; background: #0f172a; border: 1px solid #334155; color: white; padding: 4px 8px; border-radius: 4px; font-family: var(--font-mono);">
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">cm en cada borde</span>
+                </div>
+              </div>
+
+              <div id="scaling-warnings-container" style="margin-top: 14px;"></div>
+            </div>
+
+            <!-- Columna Derecha: Resultados de Escalamiento -->
+            <div>
+              <h4 style="font-size: 0.82rem; color: var(--accent-cyan); margin-bottom: 6px;">Dimensiones Escaladas Uniformes:</h4>
+              <table class="scaling-summary-table">
+                <thead>
+                  <tr>
+                    <th>Elemento</th>
+                    <th>Dim. Real (m)</th>
+                    <th>Dim. Escalada</th>
+                  </tr>
+                </thead>
+                <tbody id="scaling-table-body">
+                  <!-- Se llena dinámicamente con JS -->
+                </tbody>
+              </table>
+              <div style="margin-top: 8px; font-size: 0.75rem; color: #94a3b8; display: flex; justify-content: space-between;">
+                <span>Factor Escala: <strong id="lbl-scale-factor" style="color: var(--accent-orange);">1 : 67.4</strong></span>
+                <span>Espacio Libre Mesa: <strong id="lbl-free-space" style="color: var(--accent-green);">3.0 cm X / 5.2 cm Z</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Módulo 5: Materiales Comerciales para Fabricación de Maqueta -->
+          <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px;">
+            <h4 style="font-size: 0.85rem; color: #fed7aa; display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-boxes-stacked"></i> Opción de Materiales Comerciales Disponibles (Maqueta Física)
+            </h4>
+            <p style="font-size: 0.76rem; color: #94a3b8; margin: 4px 0 8px 0;">
+              Comparación entre la sección geométricamente semejante ideal y las dimensiones comerciales de listones de madera balsa, pino y planchas MDF:
+            </p>
+            <table class="commercial-table">
+              <thead>
+                <tr>
+                  <th>Elemento</th>
+                  <th>Dim. Ideal Escalada</th>
+                  <th>Material Comercial Más Cercano</th>
+                  <th>Dim. Comercial</th>
+                  <th>Diferencia Absoluta</th>
+                  <th>Dif. %</th>
+                  <th>Longitud / Pieza</th>
+                  <th>Cantidad Est.</th>
+                </tr>
+              </thead>
+              <tbody id="commercial-table-body">
+                <!-- Se llena dinámicamente con JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Similitud Geométrica vs Dinámica -->
+          <div class="warning-box" style="background: rgba(2, 132, 199, 0.1); border-color: rgba(56, 189, 248, 0.4);">
+            <i class="fa-solid fa-atom warning-icon" style="color: var(--accent-cyan);"></i>
+            <div class="warning-text" style="color: #e0f2fe;">
+              <strong>DISTINCIÓN TÉCNICA: SIMILITUD GEOMÉTRICA VS. SIMILITUD DINÁMICA</strong>
+              El factor <code>k = 1:n</code> garantiza únicamente semejanza geométrica visual. Para que una maqueta física de madera reproduzca la respuesta dinámica real (frecuencias, aceleraciones y derivas), se deben satisfacer las leyes de semejanza de Cauchy/Froude:
+              <code>S_E / (S_&rho; · S_L · S_a) = 1</code>. Dado que la madera tiene módulo elástico y densidad muy distintos al hormigón armado, la maqueta física requiere lastres de masa adicionales concentrados en cada piso y escalamiento de la escala temporal <code>S_t = &radic;S_L</code> para lograr similitud dinámica.
+            </div>
+          </div>
+        </div>
+        <div class="fs-modal-footer" style="padding: 12px 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; background: var(--bg-primary);">
+          <button id="btn-scaling-entendido" class="btn-primary">Entendido</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 3: Resultados Comparativos Cuantitativos y Exportación CSV - Módulos 11 y 13 -->
+    <div id="results-modal" class="full-screen-modal">
+      <div class="fs-modal-card">
+        <div class="fs-modal-header">
+          <h3><i class="fa-solid fa-table" style="color: var(--accent-red);"></i> Tabla de Resultados Dinámicos Calculados y Reducciones Porcentuales</h3>
+          <button id="close-results-btn" class="panel-close-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="fs-modal-body">
+          <p style="font-size: 0.8rem; color: #cbd5e1;">
+            Resultados calculados mediante el integrador numérico paso a paso Newmark-&beta; (&Delta;t = 0,01 s) bajo idéntica señal sísmica en la base:
+          </p>
+          <table class="results-matrix-table">
+            <thead>
+              <tr>
+                <th style="text-align: left;">Parámetro / Respuesta Sísmica</th>
+                <th>Caso 1: Original (L Pura)</th>
+                <th>Caso 2: Mitigada (Diagonales en X)</th>
+                <th>Reducción Porcentual (%)</th>
+                <th>Criterio Normativo NEC-SE-DS</th>
+              </tr>
+            </thead>
+            <tbody id="results-table-body">
+              <!-- Se llena dinámicamente con JS -->
+            </tbody>
+          </table>
+
+          <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid #334155; border-radius: 8px; padding: 12px; font-size: 0.78rem; line-height: 1.5; color: #cbd5e1;">
+            <strong style="color: var(--accent-cyan);"><i class="fa-solid fa-file-invoice"></i> Resumen Metodológico del Cálculo:</strong>
+            <br>&bull; <strong>Modelo:</strong> Sistema de 2 Grados de Libertad traslacionales con diafragma rígido.
+            <br>&bull; <strong>Integración Numérica:</strong> Método Newmark-&beta; (Aceleración Promedio, &gamma; = 0.5, &beta; = 0.25, incondicionalmente estable).
+            <br>&bull; <strong>Amortiguamiento:</strong> Rayleigh con &xi; = 5% para los dos modos elásticos.
+            <br>&bull; <strong>Reducción Porcentual:</strong> <code>100 × (Valor_Original − Valor_Mitigado) / Valor_Original</code>. Si la reducción resulta negativa, indica que la estructura mitigada experimentó mayor respuesta para esa frecuencia particular.
+          </div>
+        </div>
+        <div class="fs-modal-footer" style="padding: 12px 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--bg-primary);">
+          <button id="btn-export-csv-modal" class="btn-primary" style="background: #0f766e;"><i class="fa-solid fa-download"></i> Descargar Datos en CSV</button>
+          <button id="btn-results-entendido" class="btn-secondary">Cerrar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 4: Hipótesis y Limitaciones Dinámicas de 2 GDL - Módulos 6, 7, 9, 12 -->
+    <div id="theory-modal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3><i class="fa-solid fa-book-bookmark" style="color: var(--accent-orange);"></i> Parámetros, Hipótesis y Limitaciones del Modelo Dinámico</h3>
+          <button id="close-theory-btn" class="panel-close-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+          <h4>1. Formulación Matricial del Sistema de 2 Grados de Libertad (2-GDL)</h4>
+          <p>La respuesta dinámica se calcula a partir de la ecuación diferencial matricial de movimiento:
+          <br>
+          <code>M · u¨(t) + C · u˙(t) + K · u(t) = −M · r · ag(t)</code>
+          <br>
+          Donde <code>u(t) = [u1, u2]ᵀ</code> son los desplazamientos relativos de los dos niveles respecto a la base, <code>r = [1, 1]ᵀ</code> es el vector de influencia y <code>ag(t)</code> es la aceleración horizontal del terreno impuesta por la mesa vibratoria.</p>
+
+          <h4>2. Construcción de Matrices y Autovalores</h4>
+          <ul>
+            <li><strong>Matriz de Masa M:</strong> Calculada a partir del área en «L» (508 m²) considerando carga muerta permanente y el 25% de carga viva comercial reglamentaria (m1 &approx; 386 t, m2 &approx; 262 t).</li>
+            <li><strong>Matriz de Rigidez K:</strong> En el Caso 1 se calcula con la suma de rigideces a flexión de las columnas de H.A. de 45×45 cm considerando flexibilidad de pórtico. En el Caso 2 se adiciona la rigidez axial de los 8 vanos con diagonales concéntricas de acero en «X».</li>
+            <li><strong>Autovalores y Frecuencias:</strong> Resueltos analíticamente mediante la ecuación característica cuadrática <code>det(K − &omega;² M) = 0</code> para obtener f1, f2, T1, T2.</li>
+            <li><strong>Matriz de Amortiguamiento C:</strong> Modelo de Rayleigh clásico <code>C = a0·M + a1·K</code> calibrado para &xi; = 5% en ambos modos.</li>
+          </ul>
+
+          <h4>3. Hipótesis del Modelo</h4>
+          <ol>
+            <li><strong>Comportamiento Elástico Lineal:</strong> No considera degradación por daño acumulado, fisuración del hormigón ni plastificación por momentos flectores.</li>
+            <li><strong>Diafragma Rígido en su Plano:</strong> Los pisos se comportan como placas infinitamente rígidas en el plano horizontal.</li>
+            <li><strong>Grados de Libertad Traslacionales:</strong> El cálculo dinámico cuantitativo resuelve las traslaciones laterales; la torsión se ilustra cualitativamente por la excentricidad estática <code>e = CM − CR</code>.</li>
+          </ol>
+
+          <h4>4. Limitaciones Explícitas y Descargo Ético</h4>
+          <div class="warning-box">
+            <i class="fa-solid fa-triangle-exclamation warning-icon"></i>
+            <div class="warning-text">
+              <strong>DESCARGO DE RESPONSABILIDAD TÉCNICA Y ÉTICA:</strong>
+              1. Este modelo tiene propósitos docentes y comparativos para la Universidad Técnica de Manabí.
+              <br>2. <strong>NO SUSTITUYE</strong> un análisis dinámico no lineal paso a paso (Nonlinear Time-History) ni un modelo tridimensional por elementos finitos en <strong>ETABS / SAP2000 / OpenSees</strong>.
+              <br>3. Los centros de masa y rigidez se muestran como referencias calculadas en planta, pero el cálculo de esfuerzos locales en el vértice entrante requiere un mallado de elementos finitos con concentración de tensiones.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-theory-entendido" class="btn-primary">Entendido</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 5: Información y Memoria Técnica General -->
+    <div id="info-modal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3><i class="fa-solid fa-graduation-cap" style="color: var(--accent-cyan);"></i> Memoria Técnica: Irregularidad en Planta Tipo 2</h3>
+          <button id="close-modal-btn" class="panel-close-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+          <h4>1. Contexto Académico</h4>
+          <p>Proyecto para la asignatura de <strong>Diseño Estructural</strong> en la <strong>Universidad Técnica de Manabí (UTM)</strong>. Aborda el inmueble comercial de dos niveles en Portoviejo (Zona Sísmica VI, Z = 0.50g).</p>
+
+          <h4>2. Definición Normativa NEC-15 (NEC-SE-DS Tabla 7)</h4>
+          <p>La <strong>Irregularidad Tipo 2 (Retroceso de las esquinas)</strong> se configura cuando:
+          <br>
+          <code>a > 0.15 · Lx</code> &nbsp;y&nbsp; <code>b > 0.15 · Lz</code>.
+          <br>
+          En este edificio de 31 × 28 m con entrante de 20 × 18 m, los ratios son <strong>64.5%</strong> y <strong>64.3%</strong>, superando ampliamente el 15% normativo. Penalización en planta: <code>&phi;P2 = 0.90</code>.</p>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-modal-entendido" class="btn-primary">Comprendido</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts: Three.js y OrbitControls con soporte CDN y local -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <!-- Módulos de la Aplicación -->
+  <script src="js/nec-calculations.js"></script>
+  <script src="js/scaling-module.js"></script>
+  <script src="js/structural-engine.js"></script>
+  <script src="js/dynamic-simulator.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
